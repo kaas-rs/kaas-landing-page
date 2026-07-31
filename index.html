@@ -267,18 +267,24 @@
   <div class="cards">
     <!-- The book is its own Pages site, built and deployed from kaas-rs/kaas.
          These are absolute and cross-origin: nothing on that side can notice
-         a rename here, so its CI asserts these two pages keep existing. -->
-    <a class="card" href="https://kaas-rs.github.io/kaas/getting-started.html">
+         a rename here, so its CI asserts these two pages keep existing.
+
+         Every card leaves this origin, and the book deliberately does not
+         link back — so they open in a new tab, leaving this page behind them
+         rather than stranding the visitor one Back press from nowhere.
+         rel="noopener" because target="_blank" otherwise hands the opened
+         page a window.opener handle back into this one. -->
+    <a class="card" target="_blank" rel="noopener" href="https://kaas-rs.github.io/kaas/getting-started.html">
       <h2>Getting started</h2>
       <p>Install KAAS, start a broker, and stream your first topic in minutes.</p>
       <span class="go">Read the guide →</span>
     </a>
-    <a class="card" href="https://kaas-rs.github.io/kaas/">
+    <a class="card" target="_blank" rel="noopener" href="https://kaas-rs.github.io/kaas/">
       <h2>Documentation</h2>
       <p>Concepts, configuration and the full reference — built with mdBook.</p>
       <span class="go">Open the book →</span>
     </a>
-    <a class="card" href="https://github.com/kaas-rs/kaas">
+    <a class="card" target="_blank" rel="noopener" href="https://github.com/kaas-rs/kaas">
       <h2>GitHub</h2>
       <p>Source, issues and releases. Contributions welcome.</p>
       <span class="go">View the repo →</span>

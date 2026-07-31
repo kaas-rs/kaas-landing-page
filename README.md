@@ -8,10 +8,16 @@ configured here.
 
 ## What this repo is, and isn't
 
-It is one file. `index.html` is standalone — inline CSS and JS, a `data:` URI
-favicon, no build step and no external requests. Open it in a browser to
-preview; what you see is what deploys. `.github/workflows/publish.yml` copies
-it into `_site/` and hands that to Pages.
+It is one file. `index.html` has inline CSS and JS and a `data:` URI favicon,
+with no build step — open it in a browser to preview; what you see is what
+deploys. `.github/workflows/publish.yml` copies it into `_site/` and hands
+that to Pages.
+
+It is not, however, request-free: the hero pulls **three.js r128** from cdnjs
+and **Rapier 0.14** from jsdelivr at runtime. So the animation depends on two
+third-party CDNs being up and on the visitor not blocking them, and the page
+is pinned to whatever those URLs keep serving. Vendoring both would remove
+that dependency at the cost of ~2.6 MB in-repo.
 
 It is **not** the documentation. The kaas book is a separate Pages site, built
 and deployed from [kaas-rs/kaas](https://github.com/kaas-rs/kaas) at
