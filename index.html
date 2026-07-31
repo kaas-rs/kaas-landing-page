@@ -265,13 +265,15 @@
 
 <main class="landing">
   <div class="cards">
-    <!-- the rest of the site is the mdBook build in ./book/ — point these at your SUMMARY.md paths -->
-    <a class="card" href="book/getting-started.html">
+    <!-- The book is its own Pages site, built and deployed from kaas-rs/kaas.
+         These are absolute and cross-origin: nothing on that side can notice
+         a rename here, so its CI asserts these two pages keep existing. -->
+    <a class="card" href="https://kaas-rs.github.io/kaas/getting-started.html">
       <h2>Getting started</h2>
       <p>Install KAAS, start a broker, and stream your first topic in minutes.</p>
       <span class="go">Read the guide →</span>
     </a>
-    <a class="card" href="book/">
+    <a class="card" href="https://kaas-rs.github.io/kaas/">
       <h2>Documentation</h2>
       <p>Concepts, configuration and the full reference — built with mdBook.</p>
       <span class="go">Open the book →</span>

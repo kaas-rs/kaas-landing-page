@@ -3,69 +3,43 @@
 The landing page at **<https://kaas.rs/>** — the animated hero, the blurb, and
 the cards that lead into the kaas book.
 
-This repo owns the site: GitHub Pages and the `kaas.rs` custom domain are
-configured **here**, not on [kaas-rs/kaas](https://github.com/kaas-rs/kaas).
+This repo owns that site: GitHub Pages and the `kaas.rs` custom domain are
+configured here.
 
-## How the site is assembled
+## What this repo is, and isn't
 
-The published site is two pieces from two repos:
+It is one file. `index.html` is standalone — inline CSS and JS, a `data:` URI
+favicon, no build step and no external requests. Open it in a browser to
+preview; what you see is what deploys. `.github/workflows/publish.yml` copies
+it into `_site/` and hands that to Pages.
 
-| Path on the site | Comes from |
-|---|---|
-| `/` | `index.html` in this repo |
-| `/book/…` | the mdbook in `kaas-rs/kaas` under `docs/`, built there |
-
-kaas builds its own book (it needs the repo's `mdbook` pins, the mermaid and
-linkcheck backends, and the `cargo xtask check-docs-drift` gates that keep the
-compatibility tables honest) and force-pushes the rendered HTML to its
-`book-dist` branch. `.github/workflows/publish.yml` here checks that branch
-out, mounts it under `book/`, and deploys the pair to Pages.
+It is **not** the documentation. The kaas book is a separate Pages site, built
+and deployed from [kaas-rs/kaas](https://github.com/kaas-rs/kaas) at
+<https://kaas-rs.github.io/kaas/>, and the cards here link to it by absolute
+URL.
 
 ```
-kaas-rs/kaas ──mdbook build──▶ book-dist branch ─┐
-                                                 ├─▶ _site/ ──▶ Pages (kaas.rs)
-kaas-rs/kaas-landing-page ── index.html ─────────┘
+kaas-rs/kaas              ──▶ kaas-rs.github.io/kaas/   (the book)
+kaas-rs/kaas-landing-page ──▶ kaas.rs                   (this page)  ──links──▶
 ```
 
-So the site rebuilds on either half changing:
+The two sites share no build, no branch, and no credential. That is
+deliberate, and it is worth knowing why, because the obvious "nicer" layout —
+`kaas.rs/` for this page and `kaas.rs/book/` for the book — was built first and
+then removed. GitHub Pages binds a domain to exactly one repo, so serving both
+halves under `kaas.rs` means one repo must hand its output to the other: an
+orphan branch carrying the render, a cross-repo checkout, a PAT to trigger the
+redeploy, and a cron to cover that PAT expiring. All of that machinery bought
+one URL shape. Two sites need none of it.
 
-- a push to `main` here,
-- a `book-updated` repository dispatch, sent by kaas's *Docs Publish* workflow
-  once it has refreshed `book-dist`,
-- a daily cron, as a fallback for the dispatch not arriving,
-- or a manual *Run workflow* on *Publish site*.
+## The one thing that spans both repos
 
-Before deploying, the workflow re-checks every `href="book/…"` on the landing
-page against the book it just pulled — a card pointing at a page that got
-renamed or removed on the kaas side fails the build instead of shipping dead.
-
-## Editing
-
-`index.html` is standalone: inline CSS and JS, a `data:` URI favicon, no build
-step and no external requests. Open it in a browser to preview.
-
-Its `book/…` links are relative, so they resolve on the Pages preview URL
-(`kaas-rs.github.io/kaas-landing-page/`) as well as on `kaas.rs` — but only
-after a deploy has mounted the book. Opening the file straight off disk gives
-you the page without a working `/book/`.
-
-## The cross-repo trigger
-
-kaas needs a token to dispatch to this repo — the default `GITHUB_TOKEN` is
-scoped to its own repo and cannot. kaas's *Docs Publish* workflow reads it from
-a `LANDING_DISPATCH_TOKEN` secret and **skips the dispatch when that secret is
-absent**, so an unconfigured token costs you a stale site, never a red build.
-To (re)configure it: create a fine-grained PAT scoped to this repo with
-*Contents: read and write* (what `POST /repos/…/dispatches` requires), then run
-
-```bash
-gh secret set LANDING_DISPATCH_TOKEN --repo kaas-rs/kaas
-```
-
-Without it, a book update reaches the site via the daily cron — up to a day
-late — or immediately on a manual run of *Publish site*. Note GitHub disables
-scheduled workflows in a repo with no pushes for 60 days, which this repo can
-easily hit; the token is what keeps the site prompt.
+These cards deep-link to `index.html` and `getting-started.html` in the book.
+Because those links are absolute and cross-origin, nothing here can detect a
+rename on the kaas side — the link would simply start 404ing. So kaas's CI
+asserts both pages keep building, and that check is the only guard on it. If
+you add a card pointing at a new book page, add it to that check too
+(the `docs` job in kaas's `.github/workflows/ci.yml`).
 
 ## License
 

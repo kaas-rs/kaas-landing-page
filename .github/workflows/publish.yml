@@ -1,82 +1,39 @@
 name: Publish site
 
-# https://kaas.rs/ is assembled from two repos:
-#
-#   * this one     — index.html, which owns the site root
-#   * kaas-rs/kaas — the mdbook, built there and force-pushed to its
-#                    `book-dist` branch, mounted here under /book/
-#
-# so either half changing has to rebuild the site: a push here, or the
-# `book-updated` repository_dispatch that kaas's Docs Publish workflow
-# sends after it refreshes `book-dist`.
+# Deploys the landing page to https://kaas.rs/. That is the whole job — the
+# book is a separate Pages site built and deployed from kaas-rs/kaas, which
+# this page links to by absolute URL. No handoff, no token, no cron.
+
 on:
   push:
     branches: [main]
-  repository_dispatch:
-    types: [book-updated]
   workflow_dispatch:
-  # Fallback so a missing/expired LANDING_DISPATCH_TOKEN on the kaas side
-  # bounds staleness at a day instead of pinning the site to whatever the
-  # book looked like when the token last worked. Caveat: GitHub disables
-  # cron in a repo with no pushes for 60 days, so this is a safety net, not
-  # the mechanism — the dispatch is.
-  schedule:
-    - cron: "17 5 * * *"
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# One deploy at a time; a superseded trigger just skips to the newest.
+# One deploy at a time; a superseded push just skips to the newest.
 concurrency:
   group: pages
   cancel-in-progress: true
-
-env:
-  BOOK_REPO: kaas-rs/kaas
-  BOOK_REF: book-dist
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out the landing page
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
 
-      # kaas is public, so the default GITHUB_TOKEN is enough to read it —
-      # no PAT or deploy key needed on this side.
-      - name: Check out the built book (${{ env.BOOK_REPO }} @ ${{ env.BOOK_REF }})
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ env.BOOK_REPO }}
-          ref: ${{ env.BOOK_REF }}
-          path: .book
-
-      - name: Assemble site (landing page + book)
+      - name: Assemble site
         run: |
           rm -rf _site
-          mkdir -p _site/book
+          mkdir _site
           cp index.html _site/
           # The page is self-contained today (inline CSS/JS, data: URI
           # favicon); this keeps an assets/ dir working if one is added.
           if [ -d assets ]; then cp -r assets _site/; fi
-          rm -rf .book/.git
-          cp -r .book/. _site/book/
           test -f _site/index.html   # the landing page must own the root
-          # A dead card is worse than a failed deploy: every book link on the
-          # landing page has to resolve against the book we just pulled.
-          #
-          # mapfile, not `for x in $(...)`: the href="book/" card reduces to
-          # an empty target, and word splitting silently drops empty tokens —
-          # so the split form skipped that card entirely and never checked
-          # book/index.html, i.e. never noticed an empty book-dist.
-          mapfile -t targets < <(grep -o 'href="book/[^"]*"' _site/index.html | sed 's/href="book\/\?//;s/"$//')
-          test "${#targets[@]}" -gt 0 || { echo "no book/ links found on the landing page — the link check would be vacuous"; exit 1; }
-          for target in "${targets[@]}"; do
-            test -e "_site/book/${target:-index.html}" \
-              || { echo "landing page links to missing book/${target:-index.html}"; exit 1; }
-          done
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
