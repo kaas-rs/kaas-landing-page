@@ -63,10 +63,11 @@ jobs:
           if [ -d assets ]; then cp -r assets _site/; fi
           rm -rf .book/.git
           cp -r .book/. _site/book/
-          test -f _site/index.html        # the landing page must own the root
-          test -f _site/book/index.html   # book-dist must be a built book
+          test -f _site/index.html   # the landing page must own the root
           # A dead card is worse than a failed deploy: every book link on the
-          # landing page has to resolve against the book we just pulled.
+          # landing page has to resolve against the book we just pulled. The
+          # href="book/" card reduces to an empty target here, so this also
+          # covers book/index.html — i.e. that book-dist is a real book.
           for target in $(grep -o 'href="book/[^"]*"' _site/index.html | sed 's/href="book\/\?//;s/"$//'); do
             test -e "_site/book/${target:-index.html}" || { echo "landing page links to missing book/${target}"; exit 1; }
           done
