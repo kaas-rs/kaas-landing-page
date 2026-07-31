@@ -65,11 +65,17 @@ jobs:
           cp -r .book/. _site/book/
           test -f _site/index.html   # the landing page must own the root
           # A dead card is worse than a failed deploy: every book link on the
-          # landing page has to resolve against the book we just pulled. The
-          # href="book/" card reduces to an empty target here, so this also
-          # covers book/index.html — i.e. that book-dist is a real book.
-          for target in $(grep -o 'href="book/[^"]*"' _site/index.html | sed 's/href="book\/\?//;s/"$//'); do
-            test -e "_site/book/${target:-index.html}" || { echo "landing page links to missing book/${target}"; exit 1; }
+          # landing page has to resolve against the book we just pulled.
+          #
+          # mapfile, not `for x in $(...)`: the href="book/" card reduces to
+          # an empty target, and word splitting silently drops empty tokens —
+          # so the split form skipped that card entirely and never checked
+          # book/index.html, i.e. never noticed an empty book-dist.
+          mapfile -t targets < <(grep -o 'href="book/[^"]*"' _site/index.html | sed 's/href="book\/\?//;s/"$//')
+          test "${#targets[@]}" -gt 0 || { echo "no book/ links found on the landing page — the link check would be vacuous"; exit 1; }
+          for target in "${targets[@]}"; do
+            test -e "_site/book/${target:-index.html}" \
+              || { echo "landing page links to missing book/${target:-index.html}"; exit 1; }
           done
 
       - name: Upload Pages artifact
