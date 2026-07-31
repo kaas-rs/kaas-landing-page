@@ -32,6 +32,7 @@ So the site rebuilds on either half changing:
 - a push to `main` here,
 - a `book-updated` repository dispatch, sent by kaas's *Docs Publish* workflow
   once it has refreshed `book-dist`,
+- a daily cron, as a fallback for the dispatch not arriving,
 - or a manual *Run workflow* on *Publish site*.
 
 Before deploying, the workflow re-checks every `href="book/…"` on the landing
@@ -61,8 +62,10 @@ To (re)configure it: create a fine-grained PAT scoped to this repo with
 gh secret set LANDING_DISPATCH_TOKEN --repo kaas-rs/kaas
 ```
 
-Without it, a book update reaches the site on the next push here or a manual
-run of *Publish site*.
+Without it, a book update reaches the site via the daily cron — up to a day
+late — or immediately on a manual run of *Publish site*. Note GitHub disables
+scheduled workflows in a repo with no pushes for 60 days, which this repo can
+easily hit; the token is what keeps the site prompt.
 
 ## License
 

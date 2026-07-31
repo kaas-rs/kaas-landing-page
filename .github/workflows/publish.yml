@@ -15,6 +15,13 @@ on:
   repository_dispatch:
     types: [book-updated]
   workflow_dispatch:
+  # Fallback so a missing/expired LANDING_DISPATCH_TOKEN on the kaas side
+  # bounds staleness at a day instead of pinning the site to whatever the
+  # book looked like when the token last worked. Caveat: GitHub disables
+  # cron in a repo with no pushes for 60 days, so this is a safety net, not
+  # the mechanism — the dispatch is.
+  schedule:
+    - cron: "17 5 * * *"
 
 permissions:
   contents: read
