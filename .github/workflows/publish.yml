@@ -1,0 +1,81 @@
+name: Publish site
+
+# https://kaas.rs/ is assembled from two repos:
+#
+#   * this one     — index.html, which owns the site root
+#   * kaas-rs/kaas — the mdbook, built there and force-pushed to its
+#                    `book-dist` branch, mounted here under /book/
+#
+# so either half changing has to rebuild the site: a push here, or the
+# `book-updated` repository_dispatch that kaas's Docs Publish workflow
+# sends after it refreshes `book-dist`.
+on:
+  push:
+    branches: [main]
+  repository_dispatch:
+    types: [book-updated]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a superseded trigger just skips to the newest.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  BOOK_REPO: kaas-rs/kaas
+  BOOK_REF: book-dist
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the landing page
+        uses: actions/checkout@v6
+
+      # kaas is public, so the default GITHUB_TOKEN is enough to read it —
+      # no PAT or deploy key needed on this side.
+      - name: Check out the built book (${{ env.BOOK_REPO }} @ ${{ env.BOOK_REF }})
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.BOOK_REPO }}
+          ref: ${{ env.BOOK_REF }}
+          path: .book
+
+      - name: Assemble site (landing page + book)
+        run: |
+          rm -rf _site
+          mkdir -p _site/book
+          cp index.html _site/
+          # The page is self-contained today (inline CSS/JS, data: URI
+          # favicon); this keeps an assets/ dir working if one is added.
+          if [ -d assets ]; then cp -r assets _site/; fi
+          rm -rf .book/.git
+          cp -r .book/. _site/book/
+          test -f _site/index.html        # the landing page must own the root
+          test -f _site/book/index.html   # book-dist must be a built book
+          # A dead card is worse than a failed deploy: every book link on the
+          # landing page has to resolve against the book we just pulled.
+          for target in $(grep -o 'href="book/[^"]*"' _site/index.html | sed 's/href="book\/\?//;s/"$//'); do
+            test -e "_site/book/${target:-index.html}" || { echo "landing page links to missing book/${target}"; exit 1; }
+          done
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

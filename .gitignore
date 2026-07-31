@@ -1,0 +1,4 @@
+# assembled Pages artifact (landing page + book), built by CI
+/_site/
+# the book checkout pulled from kaas-rs/kaas
+/.book/
